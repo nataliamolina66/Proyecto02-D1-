@@ -1,1 +1,45 @@
+ADMUX = (1 << REFS0);
+ADCSRA = (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
 
+void loop() {
+  while (!(PIND & (1 << DDD3))) {
+    ADMUX &= 0xF0;
+    ADMUX |= 0b00000;
+    ADCSRA |= (1 << ADSC);
+    while (ADCSRA & (1 << ADSC));
+
+    int potValue = ADC;
+    angle0 = map(potValue, 0, 1023, 0, 90);
+    servoA.write(angle0);
+  }
+  while (!(PIND & (1 << DDD4))) {
+    ADMUX &= 0xF0;
+    ADMUX |= 0b00001;
+    ADCSRA |= (1 << ADSC);
+    while (ADCSRA & (1 << ADSC));
+
+    int potValue = ADC;
+    angle1 = map(potValue, 0, 1023, 0, 140);
+    servoB.write(angle1);
+    }
+  while (!(PIND & (1 << DDD5))) {
+    ADMUX &= 0xF0;
+    ADMUX |= 0b00010;
+    ADCSRA |= (1 << ADSC);
+    while (ADCSRA & (1 << ADSC));
+
+    int potValue = ADC;
+    angle2 = map(potValue, 0, 1023, 0, 120);
+    servoC.write(angle2);
+    }
+   while (!(PIND & (1 << DDD6))) {
+    ADMUX &= 0xF0;
+    ADMUX |= 0b00011;
+    ADCSRA |= (1 << ADSC);
+    while (ADCSRA & (1 << ADSC));
+
+    int potValue = ADC;
+    angle3 = map(potValue, 0, 1023, 0, 130);
+    servoD.write(angle3);
+    }
+    }
