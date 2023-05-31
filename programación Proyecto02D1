@@ -1,3 +1,10 @@
+#include <avr/io.h>
+#include <avr/interrupt.h>
 
-}
+volatile unsigned long elapsedTime = 0;
+const unsigned long interval = 5000; // 5 seconds interval
+
+volatile unsigned long elapsedT2 = 0;
+const unsigned long intervalT2 = 15000;  // 15 seconds interval
+
 
