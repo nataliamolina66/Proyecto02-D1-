@@ -4,4 +4,4 @@ void writeAngleToRegister (int address, byte valor)
   EEAR = address;
   EEDR = valor;
   EECR |= (1<< EEMPE);
-  EECR |= (1<<EEPE); 
+  EECR |= (1<<EEPE); n
