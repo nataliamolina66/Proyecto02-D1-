@@ -49,3 +49,25 @@ ISR(PCINT0_vect)
     }
   }
 }
+
+ISR(PCINT2_vect)
+{
+  if (bit_is_clear(PIND, buttonPin2)) {
+    // Pin D2 triggered the ISR on a Falling pulse
+    D7_state = !D7_state;
+    // Set LED 1 to state of D2_state boolean
+    if (D7_state) {
+      servoA.write(150);
+      servoB.write(60);
+      servoC.write(120);
+      servoD.write(130);
+      servoE.write(150);
+    } else {
+      servoA.write(0);
+      servoB.write(0);
+      servoC.write(0);
+      servoD.write(0);
+      servoE.write(0); // Set the corresponding pin to LOW
+    }
+  }
+  }
