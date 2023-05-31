@@ -17,3 +17,28 @@ void writeAngleToRegister (int address, byte valor) {
  int angle2 = 0;
  int angle3 = 0;
  
+ void setup {
+ }
+ 
+ void loop(){
+  if (!PIND & (1 << DDD3))) { 
+    writeAngleToRegister(0, angle0); 
+    }
+    delay(200);
+   }
+  if (!PIND & (1 << DDD4))) { 
+    writeAngleToRegister(1, angle1); 
+    }
+    delay(200);
+   }
+  if (!PIND & (1 << DDD5))) { 
+    writeAngleToRegister(2, angle2); 
+    }
+    delay(200);
+   }
+  if (!PIND & (1 << DDD6))) { 
+    writeAngleToRegister(3, angle3); 
+    }
+    delay(200);
+   }
+ 
