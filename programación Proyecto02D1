@@ -6,4 +6,14 @@ void writeAngleToRegister (int address, byte valor) {
   EECR |= (1<< EEMPE);
   EECR |= (1<<EEPE);
   }
- byt readAngle
+ byt readAngleFromRegister (int address) {
+  while (EECR & (1 << EEPE));
+  EEAR = address;
+  EECR |= (1<<EERE);
+  return EEDR;
+ }
+ int angle0 = 0;
+ int angle1 = 0;
+ int angle2 = 0;
+ int angle3 = 0;
+ 
