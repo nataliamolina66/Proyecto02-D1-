@@ -1,7 +1,9 @@
-void writeAngleToRegister (int address, byte valor) 
+void writeAngleToRegister (int address, byte valor) {
   while (EECR & (1 << EEPE));
   EECR = (0 << EEPM1 | (0EEPM0); 
   EEAR = address;
   EEDR = valor;
   EECR |= (1<< EEMPE);
-  EECR |= (1<<EEPE); n
+  EECR |= (1<<EEPE);
+  }
+ byt readAngle
