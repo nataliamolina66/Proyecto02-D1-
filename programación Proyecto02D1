@@ -6,7 +6,7 @@ void writeAngleToRegister (int address, byte valor) {
   EECR |= (1<< EEMPE);
   EECR |= (1<<EEPE);
   }
- byt readAngleFromRegister (int address) {
+ byte readAngleFromRegister (int address) {
   while (EECR & (1 << EEPE));
   EEAR = address;
   EECR |= (1<<EERE);
@@ -41,4 +41,6 @@ void writeAngleToRegister (int address, byte valor) {
     }
     delay(200);
    }
+  while (!(PIND&(1<<DDD2))) {
+    servoA.write(readAngleFromRegister(0));
  
