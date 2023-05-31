@@ -1,1 +1,170 @@
+#include <Servo.h>
 
+#define SERVOA_PIN 9
+#define SERVOB_PIN 10
+#define SERVOC_PIN 11
+#define SERVOD_PIN 12
+#define SERVOE_PIN 13
+
+void setup() {
+Servo servoA;
+Servo servoB;
+Servo servoC;
+Servo servoD;
+Servo servoE;
+
+DDRB |= (1 << DDB1);
+DDRB |= (1 << DDB2);
+DDRB |= (1 << DDB3);
+DDRB |= (1 << DDB4);
+DDRB |= (1 << DDB5);
+
+servoA.attach(SERVOA_PIN);
+servoB.attach(SERVOB_PIN);
+servoC.attach(SERVOC_PIN);
+servoD.attach(SERVOD_PIN);
+servoE.attach(SERVOE_PIN);
+
+servoA.write(90);
+servoB.write(140);
+servoC.write(0);
+servoD.write(0);
+servoE.write(0);
+
+servoA.writeMicroseconds(1000);
+servoB.writeMicroseconds(1000);
+servoC.writeMicroseconds(1000);
+servoD.writeMicroseconds(1000);
+servoE.writeMicroseconds(1000);
+
+void loop() {
+  while (!(PIND & (1 << DDD3))) {
+    ADMUX &= 0xF0;
+    ADMUX |= 0b00000;
+    ADCSRA |= (1 << ADSC);
+    while (ADCSRA & (1 << ADSC));
+
+    int potValue = ADC;
+    angle0 = map(potValue, 0, 1023, 0, 90);
+    servoA.write(angle0);
+
+    if (!(PIND & (1 << DDD2))) {
+      writeAngleToRegister(0, angle0);
+    }
+    delay(200);
+  }
+
+  while (!(PIND & (1 << DDD4))) {
+    ADMUX &= 0xF0;
+    ADMUX |= 0b00001;
+    ADCSRA |= (1 << ADSC);
+    while (ADCSRA & (1 << ADSC));
+
+    int potValue = ADC;
+    angle1 = map(potValue, 0, 1023, 0, 140);
+    servoB.write(angle1);
+
+    if (!(PIND & (1 << DDD2))) {
+      writeAngleToRegister(1, angle1);
+    }
+
+    delay(200);
+  }
+
+  while (!(PIND & (1 << DDD5))) {
+    ADMUX &= 0xF0;
+    ADMUX |= 0b00010;
+    ADCSRA |= (1 << ADSC);
+    while (ADCSRA & (1 << ADSC));
+
+    int potValue = ADC;
+    angle2 = map(potValue, 0, 1023, 0, 120);
+    servoC.write(angle2);
+
+    if (!(PIND & (1 << DDD2))) {
+      writeAngleToRegister(2, angle2);
+    }
+
+    delay(200);
+  }
+
+  while (!(PIND & (1 << DDD6))) {
+    ADMUX &= 0xF0;
+    ADMUX |= 0b00011;
+    ADCSRA |= (1 << ADSC);
+    while (ADCSRA & (1 << ADSC));
+
+    int potValue = ADC;
+    angle3 = map(potValue, 0, 1023, 0, 130);
+    servoD.write(angle3);
+
+    if (!(PIND & (1 << DDD2))) {
+      writeAngleToRegister(3, angle3);
+    }
+
+    delay(200);
+  }
+
+  while (!(PIND & (1 << DDD2))) {
+    servoA.write(readAngleFromRegister(0));
+    servoB.write(readAngleFromRegister(1));
+    servoC.write(readAngleFromRegister(2));
+    servoD.write(readAngleFromRegister(3));
+
+    delay(200);
+  }
+}
+
+ISR(PCINT0_vect) {
+  if (bit_is_clear(PINB, buttonPin1)) {
+    D8_state = !D8_state;
+
+    if (D8_state) {
+      servoA.write(0);
+      servoB.write(0);
+      servoC.write(120);
+      servoD.write(130);
+      servoE.write(90);
+    } else {
+      servoA.write(0);
+      servoB.write(0);
+      servoC.write(0);
+      servoD.write(0);
+      servoE.write(0);
+    }
+  }
+}
+
+ISR(PCINT2_vect) {
+  if (bit_is_clear(PIND, buttonPin2)) {
+    D7_state = !D7_state;
+
+    if (D7_state) {
+      servoA.write(0);
+      servoB.write(0);
+      servoC.write(0);
+      servoD.write(0);
+      servoE.write(90);
+    } else {
+      servoA.write(0);
+      servoB.write(0);
+      servoC.write(0);
+      servoD.write(0);
+      servoE.write(0);
+    }
+  }
+}
+
+ISR(TIMER0_COMPA_vect) {
+  elapsedTime += 1;
+
+  if (elapsedTime >= interval) {
+    elapsedTime = 0;
+
+    servoA.write(90);
+    servoB.write(140);
+    servoC.write(0);
+    servoD.write(0);
+    servoE.write(0);
+  }
+}
