@@ -24,3 +24,28 @@ void setup () {
 void loop () {
 //Resto del código
 }
+
+ISR(PCINT0_vect)
+{
+  // Port D Interrupt occurred
+  
+  // Check if this was B0
+  if (bit_is_clear(PINB, buttonPin1)) {
+    // Pin D2 triggered the ISR on a Falling pulse
+    D8_state = !D8_state;
+    // Set LED 1 to state of D2_state boolean
+    if (D8_state) {
+      servoA.write(180);
+      servoB.write(120);
+      servoC.write(60);
+      servoD.write(150);
+      servoE.write(90);
+    } else {
+      servoA.write(0);
+      servoB.write(0);
+      servoC.write(0);
+      servoD.write(0);
+      servoE.write(0); // Set the corresponding pin to LOW
+    }
+  }
+}
