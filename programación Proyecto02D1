@@ -8,26 +8,38 @@ volatile unsigned long elapsedT2 = 0;
 const unsigned long intervalT2 = 15000;  // 15 seconds interval
 
 void setup() {
-// Set Timer0 CTC mode and prescaler to 256
+
   TCCR0A = _BV(WGM01);
   TCCR0B = _BV(CS02);
 
-  // Set the compare value for 1ms interval
   OCR0A = 156; // (16MHz / (256 * 1000Hz)) - 1
 
-  // Enable Timer0 compare match interrupt
   TIMSK0 |= _BV(OCIE0A);
 
-
-  // Set Timer2 CTC mode and prescaler to 1024
   TCCR2A = _BV(WGM21);
   TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20);
 
-  // Set the compare value for a shorter interval
   OCR2A = 100;
 
-  // Enable Timer2 compare match interrupt
   TIMSK2 |= _BV(OCIE2A);
 
   sei();
   }
+  
+  void loop {
+  //Resto del código
+  }
+  
+ISR(TIMER0_COMPA_vect) {
+  elapsedTime += 1;
+
+  if (elapsedTime >= interval) {
+    elapsedTime = 0;
+
+    servoA.write(0);
+    servoB.write(0);
+    servoC.write(0);
+    servoD.write(0);
+    servoE.write(0);
+  }
+}
