@@ -1,1 +1,6 @@
-oveinwivnip wvnpnrwóvneq´wovnóqnv m b+pwbp  	´p ´wb P+ WPE 
+const byte buttonPin1 = 0;
+const byte buttonPin2 = 7;
+ 
+// Booleans for input states
+volatile bool D8_state = LOW;
+volatile bool D7_state = LOW;
