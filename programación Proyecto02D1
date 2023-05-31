@@ -43,4 +43,12 @@ void writeAngleToRegister (int address, byte valor) {
    }
   while (!(PIND&(1<<DDD2))) {
     servoA.write(readAngleFromRegister(0));
+    servoB.write(readAngleFromRegister(1));
+    servoC.write(readAngleFromRegister(2));
+    servoD.write(readAngleFromRegister(3));
+    
+    delay(200);
+  }
+
+
  
