@@ -1,6 +1,26 @@
 const byte buttonPin1 = 0;
 const byte buttonPin2 = 7;
  
-// Booleans for input states
 volatile bool D8_state = LOW;
 volatile bool D7_state = LOW;
+
+void setup () {
+
+  DDRB &= ~(1 << DDB0);
+  PORTB |= (1 << DDB0);
+
+  DDRD &= ~(1 << DDD7);
+  PORTD |= (1 << DDD7);
+ 
+  PCICR |= B00000100;
+
+  PCMSK2 |= B10000000;
+  
+  PCICR |= B00000001;
+
+  PCMSK0 |= B00000001;
+}
+
+void loop () {
+//Resto del código
+}
