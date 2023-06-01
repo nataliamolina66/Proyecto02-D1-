@@ -1,8 +1,12 @@
 const byte buttonPin1 = 0;
 const byte buttonPin2 = 7;
+const byte buttonPin3 = 6;
+const byte buttonPin4 = 5;
  
 volatile bool D8_state = LOW;
 volatile bool D7_state = LOW;
+volatile bool D6_state = LOW;
+volatile bool D5_state = LOW;
 
 void setup () {
 
@@ -11,10 +15,16 @@ void setup () {
 
   DDRD &= ~(1 << DDD7);
   PORTD |= (1 << DDD7);
+  
+  DDRD &= ~(1 << DDD5);
+  PORTD |= (1 << DDD5);
+
+  DDRD &= ~(1 << DDD6);
+  PORTD |= (1 << DDD6);
  
   PCICR |= B00000100;
 
-  PCMSK2 |= B10000000;
+  PCMSK2 |= B11100000;
   
   PCICR |= B00000001;
 
@@ -70,4 +80,45 @@ ISR(PCINT2_vect)
       servoE.write(0); // Set the corresponding pin to LOW
     }
   }
+  
+  if (bit_is_clear(PIND, buttonPin3)) {
+
+    D6_state = !D6_state;
+
+    if (D6_state) {
+      servoA.write(90);
+      servoB.write(0);
+      servoC.write(120);
+      servoD.write(130);
+      servoE.write(0);
+    } else {
+      servoA.write(0);
+      servoB.write(0);
+      servoC.write(0);
+      servoD.write(0);
+      servoE.write(0); 
+    }
+  }
+  
+
+if (bit_is_clear(PIND, buttonPin4)) {
+
+    D5_state = !D5_state;
+
+    if (D5_state) {
+      servoA.write(0);
+      servoB.write(0);
+      servoC.write(120);
+      servoD.write(0);
+      servoE.write(80);
+    } else {
+      servoA.write(0);
+      servoB.write(0);
+      servoC.write(0);
+      servoD.write(0);
+      servoE.write(0); 
+    }
+  }
+  
+  
   }
