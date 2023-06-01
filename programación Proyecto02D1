@@ -1,1 +1,56 @@
+#include <Wire.h>
+#include <hd44780.h>                       // main hd44780 header
+#include <hd44780ioClass/hd44780_I2Cexp.h> // i2c expander i/o class header
 
+uint8_t bell[8]  = {0x04, 0x0e, 0x0e, 0x0e, 0x1f, 0x00, 0x04, 0x00};
+uint8_t note[8]  = {0x02, 0x03, 0x02, 0x0e, 0x1e, 0x0c, 0x00, 0x00};
+uint8_t clockface[8] = {0x00, 0x0e, 0x15, 0x17, 0x11, 0x0e, 0x00, 0x00};
+hd44780_I2Cexp lcd; // declare lcd object: auto locate & auto config expander chip
+// LCD geometry
+const int LCD_COLS = 16;
+const int LCD_ROWS = 2;
+
+void setup() {
+  
+   lcd.begin(LCD_COLS, LCD_ROWS);
+  lcd.createChar(0, bell);
+   lcd.createChar(1, note);
+   lcd.createChar(2, clockface);
+
+   lcd.clear();
+   lcd.print("Hello World");
+   lcd.setCursor(0, 1);
+   lcd.print("Millis ");
+   lcd.setCursor(0, 3);
+   lcd.print("servo pos  ");
+   }
+   
+  void loop() {
+  updateLCD();
+  }
+  
+  void updateLCD()
+{
+   static unsigned long lcdTimer = 0;
+   unsigned long lcdInterval = 500;  // update 2 times per second
+   if (millis() - lcdTimer >= lcdInterval)
+   {
+      lcdTimer = millis();
+      lcd.setCursor(8, 1);
+      lcd.print("       "); // overwrite old data
+      lcd.setCursor(8, 1);  // reset the cursor
+      lcd.print(millis());
+
+      lcd.setCursor(10, 3);
+      lcd.print("       "); // overwrite old data
+      lcd.setCursor(10, 3);  // reset the cursor
+      lcd.print(val);
+
+      lcd.setCursor(5, 2);
+      lcd.write(0);
+      lcd.setCursor(10, 2);
+      lcd.write(1);
+      lcd.setCursor(15, 2);
+      lcd.write(2);      
+   }
+}
