@@ -4,7 +4,7 @@ ADCSRA = (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
 void loop() {
   // Definir que si se presiona el botón PD3 debe leerse el valor del potenciómetro analógico utilizando registros de pines
 // Definir que si se presiona el botón PD3 debe leerse el valor del potenciómetro analógico utilizando registros de pines
-  while (!(PIND & (1 << DDD3))) {
+    while (!(PIND & (1 << DDD3))) {
 
     // Conversión ADC para potenciómetros 
     ADMUX &= 0xF0; // Limpieza de los bits MUX
