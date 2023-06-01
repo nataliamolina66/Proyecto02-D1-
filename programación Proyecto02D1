@@ -4,9 +4,6 @@
 volatile unsigned long elapsedTime = 0;
 const unsigned long interval = 5000; // 5 seconds interval
 
-volatile unsigned long elapsedT2 = 0;
-const unsigned long intervalT2 = 15000;  // 15 seconds interval
-
 void setup() {
 
   TCCR0A = _BV(WGM01);
@@ -15,13 +12,6 @@ void setup() {
   OCR0A = 156; // (16MHz / (256 * 1000Hz)) - 1
 
   TIMSK0 |= _BV(OCIE0A);
-
-  TCCR2A = _BV(WGM21);
-  TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20);
-
-  OCR2A = 100;
-
-  TIMSK2 |= _BV(OCIE2A);
 
   sei();
   }
@@ -41,19 +31,5 @@ ISR(TIMER0_COMPA_vect) {
     servoC.write(0);
     servoD.write(0);
     servoE.write(0);
-  }
-}
-
-ISR(TIMER2_COMPA_vect) {
-  elapsedT2 += 3;  // Increment elapsed time by 3ms (since this interrupt triggers 3 times as much)
-
-  if (elapsedT2 >= intervalT2) {
-    elapsedT2 = 0;
-
-    servoA.write(90);
-    servoB.write(90);
-    servoC.write(90);
-    servoD.write(90);
-    servoE.write(90);
   }
 }
