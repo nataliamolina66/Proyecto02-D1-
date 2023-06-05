@@ -1,0 +1,168 @@
+#include <Wire.h>
+#include <hd44780.h> // libreria hd44780 para pantalla LCD
+#include <hd44780ioClass/hd44780_I2Cexp.h> // libreria para bus i2c de comunicación para LCD
+#include <Servo.h> //libreria servos
+
+#define F_CPU 16000000UL //frecuencia de reloj
+#include <avr/io.h> //biblioteca AVR para uso de registros 
+#include <util/delay.h> // biblioteca que contiene funciones que permiten agregar retardos en el código
+
+uint8_t bell[8]  = {0x04, 0x0e, 0x0e, 0x0e, 0x1f, 0x00, 0x04, 0x00};
+uint8_t note[8]  = {0x02, 0x03, 0x02, 0x0e, 0x1e, 0x0c, 0x00, 0x00};
+uint8_t clockface[8] = {0x00, 0x0e, 0x15, 0x17, 0x11, 0x0e, 0x00, 0x00};
+hd44780_I2Cexp lcd; // declarar objeto lcd 
+
+//  geometria de la LCD
+const int LCD_COLS = 16;
+const int LCD_ROWS = 2;
+
+//Definir los pines en los que se encuentran los servos
+#define SERVOA_PIN 9
+#define SERVOB_PIN 10
+#define SERVOC_PIN 11
+#define SERVOD_PIN 12
+#define SERVOE_PIN 13
+
+//establecer los 5 servos a utilizar
+Servo servoA;
+Servo servoB;
+Servo servoC;
+Servo servoD;
+Servo servoE;
+
+//EEPROM
+void writeAngleToRegister(int address, byte valor) {
+  // Escribe el ángulo en el registro de la dirección especificada
+  while (EECR & (1 << EEPE));
+  EECR = (0 << EEPM1) | (0 << EEPM0);
+  EEAR = address;
+  EEDR = valor;
+  EECR |= (1 << EEMPE);
+  EECR |= (1 << EEPE);
+  
+}
+
+byte readAngleFromRegister(int address) {
+  // Lee el ángulo del registro de la dirección especificada
+  while (EECR & (1 << EEPE));
+  EEAR = address;
+  EECR |= (1 << EERE);
+  return EEDR;
+}
+
+//variables utilizadas en la lectura de los angulos de los potenciometros 
+int angle0 = 0;
+int angle1 = 0;
+int angle2 = 0;
+int angle3 = 0;
+
+//variables a utilizar para las interrupciones
+const byte buttonPin1 = 0;
+const byte buttonPin2 = 7;
+const byte buttonPin3 = 6;
+const byte buttonPin4 = 5;
+ 
+// Booleanos para los estados en las interrupciones 
+volatile bool D8_state = LOW;
+volatile bool D7_state = LOW;
+volatile bool D6_state = LOW;
+volatile bool D5_state = LOW;
+
+//variables a utilizar en el timer 
+volatile unsigned long elapsedTime = 0;
+const unsigned long interval = 5000; // intervalo de 5 segundos 
+
+//variable a utilizar en la función de updateLCD
+int val = 90;
+
+ 
+void setup() {
+  
+  //comenzar la comunicación serial para ambos arduinos   
+  Serial.begin(9600);
+
+  //configuración para la LCD
+  lcd.begin(LCD_COLS, LCD_ROWS);
+  lcd.createChar(0, bell);
+  lcd.createChar(1, note);
+  lcd.createChar(2, clockface);
+
+  //display para la LCD  
+  lcd.clear();
+  lcd.print("BR:EEPROM");
+  lcd.setCursor(0, 1);
+  lcd.print("Millis ");
+  lcd.setCursor(0, 3);
+  lcd.print("BV:POTENCIOMETROS ");
+
+  // Configurar los botones como entradas y ponerlos en pull-up
+  DDRD &= ~(1 << DDD2);
+  PORTD |= (1 << DDD2);
+
+  DDRD &= ~(1 << DDD3);
+  PORTD |= (1 << DDD3);
+
+  DDRD &= ~(1 << DDD4);
+  PORTD |= (1 << DDD4);
+
+  
+
+  // Configurar los servos como salida
+  DDRB |= (1 << DDB1);
+  DDRB |= (1 << DDB2);
+  DDRB |= (1 << DDB3);
+  DDRB |= (1 << DDB4);
+  DDRB |= (1 << DDB5);
+
+  // Configurar los servomotores
+  servoA.attach(SERVOA_PIN);
+  servoB.attach(SERVOB_PIN);
+  servoC.attach(SERVOC_PIN);
+  servoD.attach(SERVOD_PIN);
+  servoE.attach(SERVOE_PIN);
+
+  //Posicionar todos los servos en la posición de cero grados al iniciar
+  servoA.write(90);
+  servoB.write(90);
+  servoC.write(0);
+  servoD.write(0);
+  servoE.write(0);
+
+  // Configurar el ADC
+  ADMUX = (1 << REFS0);
+  // Habilitar el ADC configurando el preescalador a 128
+  ADCSRA = (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
+
+  // Poner los botones de las interrupciones como entradas y en pullup 
+  DDRB &= ~(1 << DDB0);
+  PORTB |= (1 << DDB0);
+
+  DDRD &= ~(1 << DDD7);
+  PORTD |= (1 << DDD7);
+ 
+  DDRD &= ~(1 << DDD5);
+  PORTD |= (1 << DDD5);
+
+  DDRD &= ~(1 << DDD6);
+  PORTD |= (1 << DDD6);
+  
+  // Configuración interrupciones 
+  PCICR |= B00000100;
+  PCMSK2 |= B11100000;
+  PCICR |= B00000001;
+  PCMSK0 |= B00000001;
+
+  servoA.writeMicroseconds(1000);
+  servoB.writeMicroseconds(1000);
+  servoC.writeMicroseconds(1000);
+  servoD.writeMicroseconds(1000);
+  servoE.writeMicroseconds(1000);
+
+  // Configurar Timer0 en modo CTC  y con un prescalar de 256
+  TCCR0A = _BV(WGM01);
+  TCCR0B = _BV(CS02);
+  OCR0A = 156; 
+  TIMSK0 |= _BV(OCIE0A);
+  sei();
+ 
+}
