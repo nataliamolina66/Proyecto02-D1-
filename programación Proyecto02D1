@@ -1,1 +1,389 @@
+#include <Wire.h>
+#include <hd44780.h> // libreria hd44780 para pantalla LCD
+#include <hd44780ioClass/hd44780_I2Cexp.h> // libreria para bus i2c de comunicación para LCD
+#include <Servo.h> //libreria servos
+
+#define F_CPU 16000000UL //frecuencia de reloj
+#include <avr/io.h> //biblioteca AVR para uso de registros 
+#include <util/delay.h> // biblioteca que contiene funciones que permiten agregar retardos en el código
+
+uint8_t bell[8]  = {0x04, 0x0e, 0x0e, 0x0e, 0x1f, 0x00, 0x04, 0x00};
+uint8_t note[8]  = {0x02, 0x03, 0x02, 0x0e, 0x1e, 0x0c, 0x00, 0x00};
+uint8_t clockface[8] = {0x00, 0x0e, 0x15, 0x17, 0x11, 0x0e, 0x00, 0x00};
+hd44780_I2Cexp lcd; // declarar objeto lcd 
+
+//  geometria de la LCD
+const int LCD_COLS = 16;
+const int LCD_ROWS = 2;
+
+//Definir los pines en los que se encuentran los servos
+#define SERVOA_PIN 9
+#define SERVOB_PIN 10
+#define SERVOC_PIN 11
+#define SERVOD_PIN 12
+#define SERVOE_PIN 13
+
+//establecer los 5 servos a utilizar
+Servo servoA;
+Servo servoB;
+Servo servoC;
+Servo servoD;
+Servo servoE;
+
+//EEPROM
+void writeAngleToRegister(int address, byte valor) {
+  // Escribe el ángulo en el registro de la dirección especificada
+  while (EECR & (1 << EEPE));
+  EECR = (0 << EEPM1) | (0 << EEPM0);
+  EEAR = address;
+  EEDR = valor;
+  EECR |= (1 << EEMPE);
+  EECR |= (1 << EEPE);
+  
+}
+
+byte readAngleFromRegister(int address) {
+  // Lee el ángulo del registro de la dirección especificada
+  while (EECR & (1 << EEPE));
+  EEAR = address;
+  EECR |= (1 << EERE);
+  return EEDR;
+}
+
+//variables utilizadas en la lectura de los angulos de los potenciometros 
+int angle0 = 0;
+int angle1 = 0;
+int angle2 = 0;
+int angle3 = 0;
+
+//variables a utilizar para las interrupciones
+const byte buttonPin1 = 0;
+const byte buttonPin2 = 7;
+const byte buttonPin3 = 6;
+const byte buttonPin4 = 5;
+ 
+// Booleanos para los estados en las interrupciones 
+volatile bool D8_state = LOW;
+volatile bool D7_state = LOW;
+volatile bool D6_state = LOW;
+volatile bool D5_state = LOW;
+
+//variables a utilizar en el timer 
+volatile unsigned long elapsedTime = 0;
+const unsigned long interval = 5000; // intervalo de 5 segundos 
+
+//variable a utilizar en la función de updateLCD
+int val = 90;
+
+ 
+void setup() {
+  
+  //comenzar la comunicación serial para ambos arduinos   
+  Serial.begin(9600);
+
+  //configuración para la LCD
+  lcd.begin(LCD_COLS, LCD_ROWS);
+  lcd.createChar(0, bell);
+  lcd.createChar(1, note);
+  lcd.createChar(2, clockface);
+
+  //display para la LCD  
+  lcd.clear();
+  lcd.print("BR:EEPROM");
+  lcd.setCursor(0, 1);
+  lcd.print("Millis ");
+  lcd.setCursor(0, 3);
+  lcd.print("BV:POTENCIOMETROS ");
+
+  // Configurar los botones como entradas y ponerlos en pull-up
+  DDRD &= ~(1 << DDD2);
+  PORTD |= (1 << DDD2);
+
+  DDRD &= ~(1 << DDD3);
+  PORTD |= (1 << DDD3);
+
+  DDRD &= ~(1 << DDD4);
+  PORTD |= (1 << DDD4);
+
+  
+
+  // Configurar los servos como salida
+  DDRB |= (1 << DDB1);
+  DDRB |= (1 << DDB2);
+  DDRB |= (1 << DDB3);
+  DDRB |= (1 << DDB4);
+  DDRB |= (1 << DDB5);
+
+  // Configurar los servomotores
+  servoA.attach(SERVOA_PIN);
+  servoB.attach(SERVOB_PIN);
+  servoC.attach(SERVOC_PIN);
+  servoD.attach(SERVOD_PIN);
+  servoE.attach(SERVOE_PIN);
+
+  //Posicionar todos los servos en la posición de cero grados al iniciar
+  servoA.write(90);
+  servoB.write(90);
+  servoC.write(0);
+  servoD.write(0);
+  servoE.write(0);
+
+  // Configurar el ADC
+  ADMUX = (1 << REFS0);
+  // Habilitar el ADC configurando el preescalador a 128
+  ADCSRA = (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
+
+  // Poner los botones de las interrupciones como entradas y en pullup 
+  DDRB &= ~(1 << DDB0);
+  PORTB |= (1 << DDB0);
+
+  DDRD &= ~(1 << DDD7);
+  PORTD |= (1 << DDD7);
+ 
+  DDRD &= ~(1 << DDD5);
+  PORTD |= (1 << DDD5);
+
+  DDRD &= ~(1 << DDD6);
+  PORTD |= (1 << DDD6);
+  
+  // Configuración interrupciones 
+  PCICR |= B00000100;
+  PCMSK2 |= B11100000;
+  PCICR |= B00000001;
+  PCMSK0 |= B00000001;
+
+  servoA.writeMicroseconds(1000);
+  servoB.writeMicroseconds(1000);
+  servoC.writeMicroseconds(1000);
+  servoD.writeMicroseconds(1000);
+  servoE.writeMicroseconds(1000);
+
+  // Configurar Timer0 en modo CTC  y con un prescalar de 256
+  TCCR0A = _BV(WGM01);
+  TCCR0B = _BV(CS02);
+  OCR0A = 156; 
+  TIMSK0 |= _BV(OCIE0A);
+  sei();
+ 
+}
+ 
+void loop() {
+  //función para mantener la LCD encendida
+  updateLCD();
+
+
+
+  //Siempre y cuando esté apachado el botón del pin 3, corre esta parte que deja mover el potenciómetro para cambiar el ángulo del servo.
+  // Si se apacha el botón rojo mientras se tiene apachado el botón del pin 3, se guarda el valor del ángulo en la eeprom.
+  //Esto se repite para los demas potenciometros  
+
+  while (!(PIND & (1 << DDD3))) {
+  // Enviar el valor '1' a través de la comunicación serial
+   Serial.write('1');
+    
+
+    // Conversión ADC para potenciómetros 
+    ADMUX &= 0xF0; // Limpieza de los bits MUX
+    ADMUX |= 0b00000;  // Pin A0
+    ADCSRA |= (1 << ADSC);  // Iniciar la conversión de la entrada analógica a digital
+    while (ADCSRA & (1 << ADSC)); // Esperar a que la conversión termine
+    // Leer el valor ADC del potenciómetro
+    int potValue0 = ADC; 
+    // Utilizar una función de mapeo para controlar la posición del servomotor en función de la entrada analógica del potenciómetro 
+    angle0 = map(potValue0, 0, 1023, 0, 90);
+    servoA.write(angle0);
+    if (!(PIND & (1 << DDD2))) {
+      writeAngleToRegister(0, angle0);
+    }
+    delay(200);
+  
+
+    // Conversión ADC para potenciómetros 
+    ADMUX &= 0xF0; // Limpieza de los bits MUX
+    ADMUX |= 0b00001;  // Pin A1
+    ADCSRA |= (1 << ADSC);  // Iniciar la conversión de la entrada analógica a digital
+    while (ADCSRA & (1 << ADSC)); // Esperar a que la conversión termine
+    // Leer el valor ADC del potenciómetro
+    int potValue1 = ADC; 
+    // Utilizar una función de mapeo para controlar la posición del servomotor en función de la entrada analógica del potenciómetro 
+    angle1 = map(potValue1, 0, 1023, 0, 140);
+    servoB.write(angle1);
+    if (!(PIND & (1 << DDD2))) {
+      writeAngleToRegister(1, angle1);
+    }
+    delay(200);
+  
+    // Conversión ADC para potenciómetros 
+    ADMUX &= 0xF0; // Limpieza de los bits MUX
+    ADMUX |= 0b00010;  // Pin A2
+    ADCSRA |= (1 << ADSC);  // Iniciar la conversión de la entrada analógica a digital
+    while (ADCSRA & (1 << ADSC)); // Esperar a que la conversión termine
+    // Leer el valor ADC del potenciómetro
+    int potValue2 = ADC; 
+    // Utilizar una función de mapeo para controlar la posición del servomotor en función de la entrada analógica del potenciómetro 
+    angle2 = map(potValue2, 0, 1023, 0, 120);
+    servoC.write(angle2);
+    if (!(PIND & (1 << DDD2))) {
+      writeAngleToRegister(2, angle2);
+    }
+    delay(200);
+
+    // Conversión ADC para potenciómetros 
+    ADMUX &= 0xF0; // Limpieza de los bits MUX
+    ADMUX |= 0b00011;  // Pin A3
+    ADCSRA |= (1 << ADSC);  // Iniciar la conversión de la entrada analógica a digital
+    while (ADCSRA & (1 << ADSC)); // Esperar a que la conversión termine
+    // Leer el valor ADC del potenciómetro
+    int potValue3 = ADC; 
+    // Utilizar una función de mapeo para controlar la posición del servomotor en función de la entrada analógica del potenciómetro 
+    angle3 = map(potValue3, 0, 1023, 0, 130);
+    servoD.write(angle3);
+    if (!(PIND & (1 << DDD2))) {
+      writeAngleToRegister(3, angle3);
+    }
+    delay(200);
+  }
+
+  //Si se presiona el boton digital 2 se utiliza EEPROM 
+    while (!(PIND & (1 << DDD2))) {
+    // Enviar el valor '2' a través de la comunicación serial
+    Serial.write('2');
+
+    servoA.write(readAngleFromRegister(0));
+    servoB.write(readAngleFromRegister(1));
+    servoC.write(readAngleFromRegister(2));
+    servoD.write(readAngleFromRegister(3));
+
+    delay(200);
+  }
+  }
+
+//función la cual controla la LCD   
+void updateLCD()
+{
+   static unsigned long lcdTimer = 0;
+   unsigned long lcdInterval = 500; 
+   if (millis() - lcdTimer >= lcdInterval)
+   {
+      lcdTimer = millis();
+      lcd.setCursor(8, 1);
+      lcd.print("       "); 
+      lcd.setCursor(8, 1);  
+      lcd.print(millis());
+
+      lcd.setCursor(10, 3);
+      lcd.print("       "); 
+      lcd.setCursor(10, 3);  
+      lcd.print(val);
+
+      lcd.setCursor(5, 2);
+      lcd.write(0);
+      lcd.setCursor(10, 2);
+      lcd.write(1);
+      lcd.setCursor(15, 2);
+      lcd.write(2);      
+   }
+}
+
+//INTERRUPCIONES//
+ISR(PCINT0_vect)
+{
+  
+  if (bit_is_clear(PINB, buttonPin1)) {
+    D8_state = !D8_state;
+    
+    if (D8_state) {
+      servoA.write(0);
+      servoB.write(0);
+      servoC.write(120);
+      servoD.write(130);
+      servoE.write(70);
+    } 
+    else {
+      servoA.write(90);
+    servoB.write(90);
+    servoC.write(0);
+    servoD.write(0);
+    servoE.write(0);
+    }
+  }
+}
+
+ISR(PCINT2_vect)
+{
+  if (bit_is_clear(PIND, buttonPin2)) {
+    D7_state = !D7_state;
+    if (D7_state) {
+      servoA.write(0);
+      servoB.write(0);
+      servoC.write(0);
+      servoD.write(0);
+      servoE.write(70);
+    }
+    else {
+      servoA.write(90);
+      servoB.write(90);
+      servoC.write(0);
+      servoD.write(0);
+      servoE.write(0);
+    }    
+  }
+  
+
+  if (bit_is_clear(PIND, buttonPin3)) {
+
+    D6_state = !D6_state;
+
+    if (D6_state) {
+      servoA.write(90);
+      servoB.write(0);
+      servoC.write(120);
+      servoD.write(130);
+      servoE.write(0);
+    } else {
+      servoA.write(0);
+      servoB.write(0);
+      servoC.write(0);
+      servoD.write(0);
+      servoE.write(0); 
+    }
+  }
+  
+
+if (bit_is_clear(PIND, buttonPin4)) {
+
+    D5_state = !D5_state;
+
+    if (D5_state) {
+      servoA.write(0);
+      servoB.write(0);
+      servoC.write(120);
+      servoD.write(0);
+      servoE.write(80);
+    } else {
+      servoA.write(0);
+      servoB.write(0);
+      servoC.write(0);
+      servoD.write(0);
+      servoE.write(0); 
+    }
+  }
+}
+
+//TIMER//
+ISR(TIMER0_COMPA_vect) {
+  elapsedTime += 1;
+
+  if (elapsedTime >= interval) {
+    elapsedTime = 0;
+
+  servoA.write(90);
+  servoB.write(90);
+  servoC.write(0);
+  servoD.write(0);
+  servoE.write(0);
+  }
+}
+
+
 
