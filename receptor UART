@@ -1,0 +1,39 @@
+#define F_CPU 16000000UL
+#include <avr/io.h>
+#include <util/delay.h>
+
+#define LED_PIN_2 2
+#define LED_PIN_3 3
+#define LED_PIN_4 4
+
+void setup()
+{
+   DDRD |= (1 << LED_PIN_2) | (1 << LED_PIN_3) | (1 << LED_PIN_4);  
+   PORTD |= (1 << LED_PIN_2);  
+   Serial.begin(9600);
+}
+
+void loop()
+{
+   if (Serial.available())
+   {
+      char serialInput = Serial.read();
+      if (serialInput == '0')
+      {
+         PORTD &= ~(1 << LED_PIN_3);  
+         PORTD &= ~(1 << LED_PIN_4);  
+      }
+      if (serialInput == '1')
+      {
+         PORTD |= (1 << LED_PIN_3);  
+         PORTD &= ~(1 << LED_PIN_4);  
+      }
+      if (serialInput == '2')
+      {
+         PORTD &= ~(1 << LED_PIN_3);  
+         PORTD |= (1 << LED_PIN_4);  
+      }
+      Serial.println(serialInput);
+   }
+   _delay_ms(100);
+}
