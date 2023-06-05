@@ -1,0 +1,60 @@
+#include <Wire.h>
+#include <hd44780.h> // libreria hd44780 para pantalla LCD
+#include <hd44780ioClass/hd44780_I2Cexp.h> // libreria para bus i2c de comunicación para LCD
+
+uint8_t bell[8]  = {0x04, 0x0e, 0x0e, 0x0e, 0x1f, 0x00, 0x04, 0x00};
+uint8_t note[8]  = {0x02, 0x03, 0x02, 0x0e, 0x1e, 0x0c, 0x00, 0x00};
+uint8_t clockface[8] = {0x00, 0x0e, 0x15, 0x17, 0x11, 0x0e, 0x00, 0x00};
+hd44780_I2Cexp lcd; // declarar objeto lcd 
+
+//  geometria de la LCD
+const int LCD_COLS = 16;
+const int LCD_ROWS = 2;
+
+//variable a utilizar en la función de updateLCD
+int val = 90;
+
+void setup() {
+  
+
+  //configuración para la LCD
+  lcd.begin(LCD_COLS, LCD_ROWS);
+  lcd.createChar(0, bell);
+  lcd.createChar(1, note);
+  lcd.createChar(2, clockface);
+
+  //display para la LCD  
+  lcd.clear();
+  lcd.print("BR:EEPROM");
+  lcd.setCursor(0, 1);
+  lcd.print("Millis ");
+  lcd.setCursor(0, 3);
+  lcd.print("BV:POTENCIOMETROS ");
+  }
+  
+  //función la cual controla la LCD   
+void updateLCD()
+{
+   static unsigned long lcdTimer = 0;
+   unsigned long lcdInterval = 500; 
+   if (millis() - lcdTimer >= lcdInterval)
+   {
+      lcdTimer = millis();
+      lcd.setCursor(8, 1);
+      lcd.print("       "); 
+      lcd.setCursor(8, 1);  
+      lcd.print(millis());
+
+      lcd.setCursor(10, 3);
+      lcd.print("       "); 
+      lcd.setCursor(10, 3);  
+      lcd.print(val);
+
+      lcd.setCursor(5, 2);
+      lcd.write(0);
+      lcd.setCursor(10, 2);
+      lcd.write(1);
+      lcd.setCursor(15, 2);
+      lcd.write(2);      
+   }
+}
